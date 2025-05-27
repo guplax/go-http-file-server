@@ -91,7 +91,7 @@ em {
 	border-radius: 3px;
 }
 
-.none, :root body .none {
+.none {
 	display: none;
 }
 
@@ -382,14 +382,6 @@ html.dragging::before {
 	padding-right: 0.5em;
 }
 
-.filter {
-	display: none;
-}
-
-:root .filter {
-	display: block;
-}
-
 .filter .form {
 	position: relative;
 	display: flex;
@@ -630,15 +622,7 @@ html.dragging::before {
 }
 
 @media print {
-	.panel, .archive {
-		display: none;
-	}
-
-	:root .panel {
-		display: none;
-	}
-
-	.tab {
+	.panel, .tab, .archive {
 		display: none;
 	}
 

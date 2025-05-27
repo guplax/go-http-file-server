@@ -39,21 +39,9 @@
 	var lastFocused;
 
 	function enableFilter() {
-		if (!document.querySelector) {
-			var filter = document.getElementById && document.getElementById('panel-filter');
-			if (filter) {
-				filter.className += ' none';
-			}
-			return;
-		}
-
 		// pre check
 		var filter = document.body.querySelector('.filter');
 		if (!filter) {
-			return;
-		}
-		if (!filter.addEventListener) {
-			filter.className += ' none';
 			return;
 		}
 
@@ -187,8 +175,6 @@
 	}
 
 	function keepFocusOnBackwardForward() {
-		if (window.onpageshow === undefined || !document.querySelector) return;
-
 		function onFocus(e) {
 			var link = e.target;
 			while (link && !(link instanceof HTMLAnchorElement)) {
@@ -210,8 +196,6 @@
 	}
 
 	function focusChildOnNavUp() {
-		if (!document.querySelector) return;
-
 		function extractCleanUrl(url) {
 			var sepIndex = url.indexOf('?');
 			if (sepIndex < 0) sepIndex = url.indexOf('#');
@@ -261,14 +245,6 @@
 	}
 
 	function enableKeyboardNavigate() {
-		if (
-			!document.querySelector ||
-			!document.addEventListener ||
-			!document.body.parentElement
-		) {
-			return;
-		}
-
 		var pathList = document.body.querySelector('.path-list');
 		var itemList = document.body.querySelector('.item-list');
 		if (!pathList && !itemList) {
@@ -536,10 +512,6 @@
 	}
 
 	function enhanceUpload() {
-		if (!document.querySelector || !document.addEventListener) {
-			return;
-		}
-
 		var upload = document.body.querySelector('.upload');
 		if (!upload) {
 			return;
@@ -597,7 +569,7 @@
 							}).then(function (file) {
 								var relativePath = dirPath + file.name;
 								files.push({file: file, relativePath: relativePath});
-							})['catch'](function (err) {	// workaround IE8- syntax error for ".catch"(reserved keyword)
+							}).catch(function (err) {
 								logError(err);
 							});
 						} else if (handle.kind === handleKindDir) {
@@ -632,7 +604,6 @@
 
 				var files = [];
 				var hasDir = false;
-				if (!dataTransferItems || !dataTransferItems.length) return onDone(files, hasDir);
 
 				var items = Array.prototype.slice.call(dataTransferItems);
 				Promise.all(items.map(function (item) {
@@ -698,7 +669,6 @@
 
 				var files = [];
 				var hasDir = false;
-				if (!dataTransferItems || !dataTransferItems.length || !dataTransferItems[0].webkitGetAsEntry) return onDone(files, hasDir);
 
 				var entries = [];
 				for (var i = 0, len = dataTransferItems.length; i < len; i++) {
@@ -798,10 +768,6 @@
 				}
 			}
 
-			if (typeof fileInput.webkitdirectory === strUndef) {
-				uploadType.className += ' ' + classNone;
-				return;
-			}
 			optDirFile && optDirFile.classList.remove(classHidden);
 			optInnerDirFile && optInnerDirFile.classList.remove(classHidden);
 
@@ -844,12 +810,12 @@
 					return;
 				}
 				var files = e.target.files;
-				if (!files || !files.length) {
+				if (!files.length) {
 					return;
 				}
 
 				var nodir = Array.prototype.slice.call(files).every(function (file) {
-					return !file.webkitRelativePath || file.webkitRelativePath.indexOf('/') < 0;
+					return file.webkitRelativePath.indexOf('/') < 0;
 				});
 				if (nodir) {
 					onClickOptFile();	// prevent clear input files
@@ -879,10 +845,6 @@
 		}
 
 		function enableUploadProgress() {	// also fix Safari upload filename has no path info
-			if (typeof FormData === strUndef) {
-				return;
-			}
-
 			var uploading = false;
 			var batches = [];
 			var classUploading = 'uploading';
@@ -932,7 +894,7 @@
 			}
 
 			function uploadProgressively(files) {
-				if (!files || !files.length) {
+				if (!files.length) {
 					return;
 				}
 
@@ -1031,22 +993,17 @@
 				e.currentTarget.classList.remove(classDragging);
 				fileInput.value = '';
 
-				if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) {
+				if (!e.dataTransfer.files.length) {
 					return;
 				}
 
-				dataTransferToFiles(e.dataTransfer, canMkdir && Boolean(uploadProgressively), function (files, hasDir) {
+				dataTransferToFiles(e.dataTransfer, canMkdir, function (files, hasDir) {
 					if (hasDir) {
 						switchToDirMode();
 						uploadProgressively(files);
 					} else {
 						switchToFileMode();
-						if (uploadProgressively) {
-							uploadProgressively(files);
-						} else {
-							fileInput.files = files;
-							form.submit();
-						}
+						uploadProgressively(files);
 					}
 				}, function () {
 					typeof showUploadDirFailMessage !== strUndef && showUploadDirFailMessage();
@@ -1135,12 +1092,9 @@
 					return;
 				}
 				var data = e.clipboardData;
-				if (!data) {
-					return;
-				}
 
 				var items = data.items;
-				if (!items || !items.length) {
+				if (!items.length) {
 					generatePastedFiles(data);
 					return;
 				}
@@ -1174,37 +1128,16 @@
 			});
 		}
 
-		function enableAddPasteFormSubmit() {
-			document.documentElement.addEventListener('paste', function (e) {
-				var data = e.clipboardData;
-				if (data && data.files && data.files.length) {
-					switchToFileMode();
-					fileInput.files = data.files;
-					form.submit();
-				}
-			});
-		}
-
 		enableAddDirFile();
 		var uploadProgressively = enableUploadProgress();
-		if (uploadProgressively) {
-			enableFormUploadProgress(uploadProgressively);
-			enableAddPasteProgressively(uploadProgressively);
-		} else {
-			enableAddPasteFormSubmit();
-		}
+		enableFormUploadProgress(uploadProgressively);
+		enableAddPasteProgressively(uploadProgressively);
 		enableAddDragDrop(uploadProgressively);
 	}
 
 	function enableNonRefreshDelete() {
-		if (!document.querySelector) {
-			return;
-		}
-
 		var itemList = document.body.querySelector('.item-list');
-		if (!itemList || !itemList.addEventListener) {
-			return;
-		}
+		if (!itemList) return;
 		if (!itemList.classList.contains('has-deletable')) return;
 
 		itemList.addEventListener('submit', function (e) {
