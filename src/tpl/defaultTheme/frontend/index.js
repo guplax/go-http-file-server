@@ -62,22 +62,13 @@
 			return;
 		}
 
-		var trim = String.prototype.trim ? function (input) {
-			return input.trim();
-		} : function () {
-			var reEdgeSpaces = /^\s+|\s+$/g
-			return function (input) {
-				return input.replace(reEdgeSpaces, '');
-			}
-		}();
-
 		var clear = filter.querySelector('button');
 
 		// event handler
 		var timeoutId;
 		var lastFilterText = '';
 		var doFilter = function () {
-			var filterText = trim(input.value).toLowerCase();
+			var filterText = input.value.trim().toLowerCase();
 			if (filterText === lastFilterText) {
 				return;
 			}
