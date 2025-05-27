@@ -117,33 +117,17 @@
 			doFilter();
 		};
 
-		var ENTER_CODE = 13;
-		var ESCAPE_CODE = 27;
-
 		input.addEventListener('keydown', function (e) {
-			if (e.key) {
-				switch (e.key) {
-					case Enter:
-						onEnter();
-						e.preventDefault();
-						break;
-					case Escape:
-					case Esc:
-						onEscape();
-						e.preventDefault();
-						break;
-				}
-			} else if (e.keyCode) {
-				switch (e.keyCode) {
-					case ENTER_CODE:
-						onEnter();
-						e.preventDefault();
-						break;
-					case ESCAPE_CODE:
-						onEscape();
-						e.preventDefault();
-						break;
-				}
+			switch (e.key) {
+				case Enter:
+					onEnter();
+					e.preventDefault();
+					break;
+				case Escape:
+				case Esc:
+					onEscape();
+					e.preventDefault();
+					break;
 			}
 		}, false);
 
@@ -346,20 +330,16 @@
 			return matchKeyA;
 		}
 
-		var UP = 'Up';
-		var DOWN = 'Down';
-		var LEFT = 'Left';
-		var RIGHT = 'Right';
-
 		var ARROW_UP = 'ArrowUp';
 		var ARROW_DOWN = 'ArrowDown';
 		var ARROW_LEFT = 'ArrowLeft';
 		var ARROW_RIGHT = 'ArrowRight';
 
-		var ARROW_UP_CODE = 38;
-		var ARROW_DOWN_CODE = 40;
-		var ARROW_LEFT_CODE = 37;
-		var ARROW_RIGHT_CODE = 39;
+		// IE/ClassicEdge specific key
+		var UP = 'Up';
+		var DOWN = 'Down';
+		var LEFT = 'Left';
+		var RIGHT = 'Right';
 
 		var SKIP_TAGS = ['INPUT', 'BUTTON', 'TEXTAREA'];
 
@@ -431,74 +411,40 @@
 				return;
 			}
 
-			if (e.key) {
-				if (canArrowMove(e)) {
-					switch (e.key) {
-						case LEFT:
-						case ARROW_LEFT:
-							if (isToEnd(e)) {
-								return getFirstFocusableSibling(pathList);
-							} else {
-								return getFocusableSibling(pathList, true);
-							}
-						case RIGHT:
-						case ARROW_RIGHT:
-							if (isToEnd(e)) {
-								return getLastFocusableSibling(pathList);
-							} else {
-								return getFocusableSibling(pathList, false);
-							}
-						case UP:
-						case ARROW_UP:
-							if (isToEnd(e)) {
-								return getFirstFocusableSibling(itemList);
-							} else {
-								return getFocusableSibling(itemList, true);
-							}
-						case DOWN:
-						case ARROW_DOWN:
-							if (isToEnd(e)) {
-								return getLastFocusableSibling(itemList);
-							} else {
-								return getFocusableSibling(itemList, false);
-							}
-					}
+			if (canArrowMove(e)) {
+				switch (e.key) {
+					case ARROW_DOWN:
+					case DOWN:
+						if (isToEnd(e)) {
+							return getLastFocusableSibling(itemList);
+						} else {
+							return getFocusableSibling(itemList, false);
+						}
+					case ARROW_UP:
+					case UP:
+						if (isToEnd(e)) {
+							return getFirstFocusableSibling(itemList);
+						} else {
+							return getFocusableSibling(itemList, true);
+						}
+					case ARROW_RIGHT:
+					case RIGHT:
+						if (isToEnd(e)) {
+							return getLastFocusableSibling(pathList);
+						} else {
+							return getFocusableSibling(pathList, false);
+						}
+					case ARROW_LEFT:
+					case LEFT:
+						if (isToEnd(e)) {
+							return getFirstFocusableSibling(pathList);
+						} else {
+							return getFocusableSibling(pathList, true);
+						}
 				}
-				if (!e.ctrlKey && (!e.altKey || IS_MAC_PLATFORM) && !e.metaKey && e.key.length === 1) {
-					return lookup(itemList, e.key, e.shiftKey);
-				}
-			} else if (e.keyCode) {
-				if (canArrowMove(e)) {
-					switch (e.keyCode) {
-						case ARROW_LEFT_CODE:
-							if (isToEnd(e)) {
-								return getFirstFocusableSibling(pathList);
-							} else {
-								return getFocusableSibling(pathList, true);
-							}
-						case ARROW_RIGHT_CODE:
-							if (isToEnd(e)) {
-								return getLastFocusableSibling(pathList);
-							} else {
-								return getFocusableSibling(pathList, false);
-							}
-						case ARROW_UP_CODE:
-							if (isToEnd(e)) {
-								return getFirstFocusableSibling(itemList);
-							} else {
-								return getFocusableSibling(itemList, true);
-							}
-						case ARROW_DOWN_CODE:
-							if (isToEnd(e)) {
-								return getLastFocusableSibling(itemList);
-							} else {
-								return getFocusableSibling(itemList, false);
-							}
-					}
-				}
-				if (!e.ctrlKey && (!e.altKey || IS_MAC_PLATFORM) && !e.metaKey && e.keyCode >= 32 && e.keyCode <= 126) {
-					return lookup(itemList, String.fromCharCode(e.keyCode), e.shiftKey);
-				}
+			}
+			if (!e.ctrlKey && (!e.altKey || IS_MAC_PLATFORM) && !e.metaKey && e.key.length === 1) {
+				return lookup(itemList, e.key, e.shiftKey);
 			}
 		}
 
