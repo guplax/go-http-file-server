@@ -30,42 +30,6 @@
 		logError = noop;
 	}
 
-	var hasClass, addClass, removeClass;
-	if (document.body.classList) {
-		hasClass = function (el, className) {
-			return el && el.classList.contains(className);
-		}
-		addClass = function (el, className) {
-			el && el.classList.add(className);
-		}
-		removeClass = function (el, className) {
-			el && el.classList.remove(className);
-		}
-	} else {
-		hasClass = function (el, className) {
-			if (!el) return;
-			var reClassName = new RegExp('\\b' + className + '\\b');
-			return reClassName.test(el.className);
-		}
-		addClass = function (el, className) {
-			if (!el) return;
-			var originalClassName = el.className;
-			var reClassName = new RegExp('\\b' + className + '\\b');
-			if (!reClassName.test(originalClassName)) {
-				el.className = originalClassName + ' ' + className;
-			}
-		}
-		removeClass = function (el, className) {
-			if (!el) return;
-			var originalClassName = el.className;
-			var reClassName = new RegExp('^\\s*' + className + '\\s+|\\s+' + className + '\\b', 'g');
-			var newClassName = originalClassName.replace(reClassName, '');
-			if (originalClassName !== newClassName) {
-				el.className = newClassName;
-			}
-		}
-	}
-
 	var hasStorage = false;
 	try {
 		if (typeof sessionStorage !== strUndef) hasStorage = true;
@@ -127,7 +91,7 @@
 				selector = selectorItemNone;
 				items = document.body.querySelectorAll(selector);
 				for (i = items.length - 1; i >= 0; i--) {
-					removeClass(items[i], classNone);
+					items[i].classList.remove(classNone);
 				}
 			} else {
 				if (clear) {
@@ -146,9 +110,9 @@
 					var item = items[i];
 					var name = item.querySelector('.name');
 					if (name && name.textContent.toLowerCase().indexOf(filterText) < 0) {
-						addClass(item, classNone);
+						item.classList.add(classNone);
 					} else {
-						removeClass(item, classNone);
+						item.classList.remove(classNone);
 					}
 				}
 			}
@@ -356,8 +320,8 @@
 					}
 				}
 			} while (siblingLI !== startLI && (
-				hasClass(siblingLI, classNone) ||
-				hasClass(siblingLI, classHeader)
+				siblingLI.classList.contains(classNone) ||
+				siblingLI.classList.contains(classHeader)
 			));
 
 			if (siblingLI) {
@@ -819,10 +783,10 @@
 				if (optTarget === optActive) {
 					return;
 				}
-				removeClass(optActive, classActive);
+				optActive.classList.remove(classActive);
 
 				optActive = optTarget;
-				addClass(optActive, classActive);
+				optActive.classList.add(classActive);
 
 				if (clearInput) {
 					fileInput.value = '';
@@ -869,11 +833,11 @@
 			}
 
 			if (typeof fileInput.webkitdirectory === strUndef) {
-				addClass(uploadType, classNone);
+				uploadType.className += ' ' + classNone;
 				return;
 			}
-			optDirFile && removeClass(optDirFile, classHidden);
-			optInnerDirFile && removeClass(optInnerDirFile, classHidden);
+			optDirFile && optDirFile.classList.remove(classHidden);
+			optInnerDirFile && optInnerDirFile.classList.remove(classHidden);
 
 			if (optFile) {
 				optFile.addEventListener('click', onClickOptFile);
@@ -972,13 +936,13 @@
 					return uploadBatch(batches.shift());	// use "return" for tail call optimize
 				} else {
 					uploading = false;
-					removeClass(elUploadStatus, classUploading);
+					elUploadStatus.classList.remove(classUploading);
 				}
 			}
 
 			function onFail(e) {
-				removeClass(elUploadStatus, classUploading);
-				addClass(elUploadStatus, classFailed);
+				elUploadStatus.classList.remove(classUploading);
+				elUploadStatus.classList.add(classFailed);
 				if (elFailedMessage) {
 					elFailedMessage.textContent = " - " + e.type;
 				}
@@ -1010,8 +974,8 @@
 					batches.push(files);
 				} else {
 					uploading = true;
-					removeClass(elUploadStatus, classFailed);
-					addClass(elUploadStatus, classUploading);
+					elUploadStatus.classList.remove(classFailed);
+					elUploadStatus.classList.add(classUploading);
 					uploadBatch(files);
 				}
 			}
@@ -1085,20 +1049,20 @@
 				if (!isSelfDragging) {
 					e.stopPropagation();
 					e.preventDefault();
-					addClass(e.currentTarget, classDragging);
+					e.currentTarget.classList.add(classDragging);
 				}
 			}
 
 			function onDragLeave(e) {
 				if (e.target === e.currentTarget) {
-					removeClass(e.currentTarget, classDragging);
+					e.currentTarget.classList.remove(classDragging);
 				}
 			}
 
 			function onDrop(e) {
 				e.stopPropagation();
 				e.preventDefault();
-				removeClass(e.currentTarget, classDragging);
+				e.currentTarget.classList.remove(classDragging);
 				fileInput.value = '';
 
 				if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) {
@@ -1292,7 +1256,7 @@
 		if (!itemList || !itemList.addEventListener) {
 			return;
 		}
-		if (!hasClass(itemList, 'has-deletable')) return;
+		if (!itemList.classList.contains('has-deletable')) return;
 
 		itemList.addEventListener('submit', function (e) {
 			if (e.defaultPrevented) {
