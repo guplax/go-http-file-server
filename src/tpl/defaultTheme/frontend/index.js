@@ -568,39 +568,14 @@
 		var optActive = optFile;
 		var canMkdir = Boolean(optDirFile);
 
-		var padStart = String.prototype.padStart ? function (sourceString, targetLength, padTemplate) {
-			return sourceString.padStart(targetLength, padTemplate);
-		} : function (sourceString, targetLength, padTemplate) {
-			var sourceLength = sourceString.length;
-			if (sourceLength >= targetLength) {
-				return sourceString;
-			}
-			var padLength = targetLength - sourceLength
-			var repeatCount = Math.ceil(padLength / padTemplate.length);
-			var padString;
-			if (String.prototype.repeat) {
-				padString = padTemplate.repeat(repeatCount);
-			} else {
-				padString = '';
-				for (var i = 0; i < repeatCount; i++) {
-					padString += padTemplate;
-				}
-			}
-			if (padString.length > padLength) {
-				padString = padString.substring(0, padLength);
-			}
-
-			return padString + sourceString;
-		}
-
 		function getTimeStamp() {
 			var now = new Date();
 			var date = String(now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate());
 			var time = String(now.getHours() * 10000 + now.getMinutes() * 100 + now.getSeconds());
 			var ms = String(now.getMilliseconds());
-			date = padStart(date, 8, '0');
-			time = padStart(time, 6, '0');
-			ms = padStart(ms, 3, '0');
+			date = date.padStart(8, '0');
+			time = time.padStart(6, '0');
+			ms = ms.padStart(3, '0');
 			var ts = '-' + date + '-' + time + '-' + ms;
 			return ts;
 		}
