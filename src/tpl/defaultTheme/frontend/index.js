@@ -1064,20 +1064,6 @@
 
 		function enableAddPasteProgressively(uploadProgressively) {
 			var typeTextPlain = 'text/plain';
-			var createTextFile;
-			var textFilename = 'text.txt';
-			if (Blob && Blob.prototype.msClose) {	// legacy Edge
-				createTextFile = function (content) {
-					var file = new Blob([content], {type: typeTextPlain});
-					file.name = textFilename;
-					return file;
-				};
-			} else if (File) {
-				createTextFile = function (content) {
-					return new File([content], textFilename, {type: typeTextPlain});
-				}
-			}
-
 			var nonTextInputTypes = ['hidden', 'radio', 'checkbox', 'button', 'reset', 'submit', 'image'];
 
 			function uploadPastedFiles(files) {
@@ -1119,9 +1105,6 @@
 					return;
 				}
 
-				if (!createTextFile) {
-					return;
-				}
 				if (!items) {
 					return;
 				}
@@ -1132,7 +1115,7 @@
 					}
 					plainTextFiles++;
 					items[i].getAsString(function (content) {
-						var file = createTextFile(content);
+						var file = new File([content], 'text.txt', {type: typeTextPlain})
 						files.push(file);
 						if (files.length === plainTextFiles) {
 							uploadPastedFiles(files);
