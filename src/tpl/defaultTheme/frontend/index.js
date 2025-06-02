@@ -1,4 +1,11 @@
 (function () {
+	function noop() {
+	}
+
+	function logError(err) {
+		console.error(err);
+	}
+
 	var strUndef = 'undefined';
 	var protoHttps = 'https:';
 
@@ -17,18 +24,6 @@
 	var Escape = 'Escape';
 	var Esc = 'Esc';
 	var Space = ' ';
-
-	var noop = function () {
-	};
-
-	var logError;
-	if (typeof console !== strUndef) {
-		logError = function (err) {
-			console.error(err);
-		}
-	} else {
-		logError = noop;
-	}
 
 	var hasStorage = false;
 	try {
