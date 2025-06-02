@@ -236,9 +236,6 @@
 		}
 
 		function getFocusableSibling(container, isBackward, startA) {
-			if (!container) {
-				return
-			}
 			if (!startA) {
 				startA = container.querySelector(':focus');
 			}
@@ -281,11 +278,8 @@
 			}
 		}
 
-		var selectorFirstAvailLi = 'li:not(.' + classNone + '):not(.' + classHeader + ')';
-
 		function getFirstFocusableSibling(container) {
-			var li = container.querySelector(selectorFirstAvailLi);
-			var a = li && li.querySelector('a');
+			var a = container.querySelector('li:not(.' + classNone + '):not(.' + classHeader + ') a');
 			return a;
 		}
 
