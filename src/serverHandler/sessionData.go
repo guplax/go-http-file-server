@@ -6,6 +6,7 @@ import (
 	"mjpclab.dev/ghfs/src/i18n"
 	"mjpclab.dev/ghfs/src/util"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -80,6 +81,8 @@ type sessionContext struct {
 	archiveFormat archiveFormat
 
 	file *os.File
+
+	query url.Values
 
 	errors []error
 }
@@ -355,11 +358,15 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 	reqPath := util.CleanUrlPath(vhostReqPath[len(h.url):])
 	fsPath := filepath.Clean(h.dir + reqPath)
 
-	rawQuery := r.URL.RawQuery
+	query := r.URL.Query()
+	queryPrefix := r.URL.RawQuery
+	if querySepIndex := strings.IndexByte(queryPrefix, '&'); querySepIndex >= 0 {
+		queryPrefix = queryPrefix[:querySepIndex]
+	}
 
 	status := http.StatusOK
 
-	needAuth, requestAuth := h.needAuth(rawQuery, vhostReqPath, fsPath)
+	needAuth, requestAuth := h.needAuth(queryPrefix, vhostReqPath, fsPath)
 	authUserId, authUserName, _authErr := h.verifyAuth(r, vhostReqPath, fsPath)
 	authSuccess := !needAuth || _authErr == nil
 	if !authSuccess {
@@ -369,46 +376,38 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 
 	headers := h.getHeaders(vhostReqPath, fsPath, authSuccess)
 
-	isSimple := false
-	isDownload := false
 	isUpload := false
 	isMkdir := false
 	isDelete := false
 	isMutate := false
-	switch {
-	case strings.HasPrefix(rawQuery, "simpledownload"):
-		isSimple = true
-		isDownload = true
-	case strings.HasPrefix(rawQuery, "simple"):
-		isSimple = true
-	case strings.HasPrefix(rawQuery, "download"):
-		isDownload = true
-	case strings.HasPrefix(rawQuery, "upload") && r.Method == http.MethodPost:
+	switch queryPrefix {
+	case "upload":
 		isUpload = true
 		isMutate = true
-	case strings.HasPrefix(rawQuery, "mkdir"):
+	case "mkdir":
 		isMkdir = true
 		isMutate = true
-	case strings.HasPrefix(r.URL.RawQuery, "delete"):
+	case "delete":
 		isDelete = true
 		isMutate = true
 	}
 
 	isArchive := false
 	var arFmt archiveFormat
-	if len(rawQuery) == 3 || (len(rawQuery) > 3 && rawQuery[3] == '&') {
-		switch rawQuery[:3] {
-		case "tar":
-			isArchive = true
-			arFmt = tarFmt
-		case "tgz":
-			isArchive = true
-			arFmt = tgzFmt
-		case "zip":
-			isArchive = true
-			arFmt = zipFmt
-		}
+	switch queryPrefix {
+	case "tar":
+		isArchive = true
+		arFmt = tarFmt
+	case "tgz":
+		isArchive = true
+		arFmt = tgzFmt
+	case "zip":
+		isArchive = true
+		arFmt = zipFmt
 	}
+
+	isSimple := query.Has("simple")
+	isDownload := query.Has("download")
 
 	accepts := acceptHeaders.ParseAccepts(r.Header.Get("Accept"))
 	acceptIndex, _, _ := accepts.GetPreferredValue(acceptContentTypes)
@@ -489,7 +488,7 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 	}
 
 	subItems = h.FilterItems(subItems)
-	rawSortBy, sortState := sortInfos(subItems, rawQuery, h.defaultSort)
+	rawSortBy, sortState := sortInfos(subItems, query.Get("sort"), h.defaultSort)
 
 	if h.emptyRoot && status == http.StatusOK && len(vhostReqPath) > 1 {
 		status = http.StatusNotFound
@@ -534,6 +533,8 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 		archiveFormat: arFmt,
 
 		file: file,
+
+		query: query,
 
 		errors: errs,
 	}

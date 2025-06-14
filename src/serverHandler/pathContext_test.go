@@ -53,7 +53,7 @@ func TestPathContext(t *testing.T) {
 	}
 
 	result = (&pathContext{simple: true, download: true}).QueryString()
-	if result != "?simpledownload" {
+	if result != "?simple&download" {
 		t.Error(result)
 	}
 
@@ -77,7 +77,7 @@ func TestPathContext(t *testing.T) {
 
 	sort = "/n"
 	result = (&pathContext{simple: true, download: true, sort: &sort}).QueryString()
-	if result != "?simpledownload&sort=/n" {
+	if result != "?simple&download&sort=/n" {
 		t.Error(result)
 	}
 }

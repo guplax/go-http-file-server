@@ -4,13 +4,12 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 const authQueryParam = "auth"
 
-func (h *aliasHandler) needAuth(rawQuery, vhostReqPath, reqFsPath string) (needAuth, requestAuth bool) {
-	if strings.HasPrefix(rawQuery, authQueryParam) {
+func (h *aliasHandler) needAuth(queryPrefix, vhostReqPath, reqFsPath string) (needAuth, requestAuth bool) {
+	if queryPrefix == authQueryParam {
 		return true, true
 	}
 
@@ -55,25 +54,26 @@ func (h *aliasHandler) verifyAuth(r *http.Request, vhostReqPath, reqFsPath strin
 	return
 }
 
-func (h *aliasHandler) redirectWithoutRequestAuth(w http.ResponseWriter, r *http.Request, session *sessionContext, data *responseData) {
-	var returnUrl string
-	index := strings.Index(r.URL.RawQuery, authQueryParam+"=")
-	if index >= 0 {
-		returnUrl = r.URL.RawQuery[index+len(authQueryParam)+1:]
-		index = strings.LastIndexByte(returnUrl, '&')
-		if index >= 0 {
-			returnUrl = returnUrl[:index]
+func (h *aliasHandler) extractNoAuthUrl(r *http.Request, session *sessionContext, data *responseData) string {
+	if session.query.Has(authQueryParam) {
+		returnUrl := session.query.Get(authQueryParam)
+
+		if len(returnUrl) > 0 {
+			url, err := url.QueryUnescape(returnUrl)
+			if err == nil {
+				returnUrl = url
+			}
 		}
-		url, err := url.QueryUnescape(returnUrl)
-		if err == nil {
-			returnUrl = url
+
+		if len(returnUrl) > 0 {
+			return returnUrl
 		}
-	} else {
-		returnUrl = r.Header.Get("Referer")
-	}
-	if len(returnUrl) == 0 {
-		returnUrl = session.prefixReqPath + data.Context.QueryString()
 	}
 
-	http.Redirect(w, r, returnUrl, http.StatusFound)
+	referrer := r.Header.Get("Referer")
+	if len(referrer) > 0 {
+		return referrer
+	}
+
+	return session.prefixReqPath + data.Context.QueryString()
 }

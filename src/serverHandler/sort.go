@@ -5,7 +5,6 @@ import (
 	"mjpclab.dev/ghfs/src/util"
 	"os"
 	"sort"
-	"strings"
 )
 
 // compare dir func
@@ -358,22 +357,10 @@ func sortInfoOriginal(items []os.FileInfo, compareDir fnCompareDir) {
 
 // sort
 
-func sortInfos(items []os.FileInfo, rawQuery string, defaultSortBy string) (rawSortBy *string, sortInfo SortState) {
-	const sortPrefix = "sort="
-	var sortBy string
-
-	// extract sort string
-	iSortBy := strings.Index(rawQuery, sortPrefix)
-	if iSortBy < 0 {
+func sortInfos(items []os.FileInfo, sortBy string, defaultSortBy string) (rawSortBy *string, sortInfo SortState) {
+	if len(sortBy) == 0 {
 		sortBy = defaultSortBy
 	} else {
-		if len(rawQuery) > iSortBy+len(sortPrefix) {
-			sortBy = rawQuery[iSortBy+len(sortPrefix):]
-			iAmp := strings.IndexByte(sortBy, '&')
-			if iAmp >= 0 {
-				sortBy = sortBy[:iAmp]
-			}
-		}
 		rawSortBy = &sortBy
 	}
 

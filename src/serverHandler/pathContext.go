@@ -8,16 +8,14 @@ type pathContext struct {
 }
 
 func (ctx pathContext) QueryString() string {
-	// ?simpledownload&sort=x/&
-	buffer := make([]byte, 1, 24)
+	// ?simple&download&sort=x/&
+	buffer := make([]byte, 1, 25)
 	buffer[0] = '?' // 1 byte
 
-	switch {
-	case ctx.simple && ctx.download:
-		buffer = append(buffer, []byte("simpledownload&")...) // 15 bytes
-	case ctx.simple:
+	if ctx.simple {
 		buffer = append(buffer, []byte("simple&")...) // 7 bytes
-	case ctx.download:
+	}
+	if ctx.download {
 		buffer = append(buffer, []byte("download&")...) // 9 bytes
 	}
 
