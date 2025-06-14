@@ -357,13 +357,10 @@ func sortInfoOriginal(items []os.FileInfo, compareDir fnCompareDir) {
 
 // sort
 
-func sortInfos(items []os.FileInfo, sortBy string, defaultSortBy string) (rawSortBy *string, sortInfo SortState) {
+func sortInfos(items []os.FileInfo, sortBy string, defaultSortBy string) (sortInfo SortState) {
 	if len(sortBy) == 0 {
 		sortBy = defaultSortBy
-	} else {
-		rawSortBy = &sortBy
 	}
-
 	if len(sortBy) == 0 {
 		return
 	}
@@ -413,5 +410,5 @@ func sortInfos(items []os.FileInfo, sortBy string, defaultSortBy string) (rawSor
 		}
 	}
 
-	return rawSortBy, SortState{dirSort, sortKey}
+	return SortState{dirSort, sortKey}
 }

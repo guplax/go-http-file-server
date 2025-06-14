@@ -488,7 +488,11 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 	}
 
 	subItems = h.FilterItems(subItems)
-	rawSortBy, sortState := sortInfos(subItems, query.Get("sort"), h.defaultSort)
+	sort := query.Get("sort")
+	if len(sort) > 2 {
+		sort = sort[:2]
+	}
+	sortState := sortInfos(subItems, sort, h.defaultSort)
 
 	if h.emptyRoot && status == http.StatusOK && len(vhostReqPath) > 1 {
 		status = http.StatusNotFound
@@ -570,7 +574,7 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 		Context: pathContext{
 			simple:      isSimple,
 			download:    isDownload,
-			sort:        rawSortBy,
+			sort:        sort,
 			defaultSort: h.defaultSort,
 		},
 	}
