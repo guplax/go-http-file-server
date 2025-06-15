@@ -84,6 +84,8 @@ type sessionContext struct {
 
 	query url.Values
 
+	outFileName string
+
 	errors []error
 }
 
@@ -110,7 +112,6 @@ type responseData struct {
 	RootRelPath string
 
 	Item          os.FileInfo
-	ItemName      string
 	SubItems      []os.FileInfo
 	AliasSubItems []os.FileInfo
 	SubItemsHtml  []itemHtml
@@ -267,7 +268,12 @@ func getSubItemPrefix(currDirRelPath, rawRequestPath string, tailSlash bool) str
 	}
 }
 
-func getItemName(info os.FileInfo, r *http.Request) (itemName string) {
+func getItemName(info os.FileInfo, r *http.Request, prefixReqPath string) (itemName string) {
+	itemName = path.Base(prefixReqPath)
+	if len(itemName) > 0 && itemName != "/" {
+		return
+	}
+
 	if info != nil {
 		itemName = info.Name()
 	}
@@ -359,10 +365,7 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 	fsPath := filepath.Clean(h.dir + reqPath)
 
 	query := r.URL.Query()
-	queryPrefix := r.URL.RawQuery
-	if querySepIndex := strings.IndexByte(queryPrefix, '&'); querySepIndex >= 0 {
-		queryPrefix = queryPrefix[:querySepIndex]
-	}
+	queryPrefix := getQueryPrefix(r.URL.RawQuery)
 
 	status := http.StatusOK
 
@@ -375,39 +378,6 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 	}
 
 	headers := h.getHeaders(vhostReqPath, fsPath, authSuccess)
-
-	isUpload := false
-	isMkdir := false
-	isDelete := false
-	isMutate := false
-	switch queryPrefix {
-	case "upload":
-		isUpload = true
-		isMutate = true
-	case "mkdir":
-		isMkdir = true
-		isMutate = true
-	case "delete":
-		isDelete = true
-		isMutate = true
-	}
-
-	isArchive := false
-	var arFmt archiveFormat
-	switch queryPrefix {
-	case "tar":
-		isArchive = true
-		arFmt = tarFmt
-	case "tgz":
-		isArchive = true
-		arFmt = tgzFmt
-	case "zip":
-		isArchive = true
-		arFmt = zipFmt
-	}
-
-	isSimple := query.Has("simple")
-	isDownload := query.Has("download")
 
 	accepts := acceptHeaders.ParseAccepts(r.Header.Get("Accept"))
 	acceptIndex, _, _ := accepts.GetPreferredValue(acceptContentTypes)
@@ -463,7 +433,60 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 
 	canIndex = canIndex && allowAccess
 
-	itemName := getItemName(item, r)
+	itemName := getItemName(item, r, prefixReqPath)
+
+	var outFileName string
+
+	isUpload := false
+	isMkdir := false
+	isDelete := false
+	isMutate := false
+	switch queryPrefix {
+	case "upload":
+		isUpload = true
+		isMutate = true
+	case "mkdir":
+		isMkdir = true
+		isMutate = true
+	case "delete":
+		isDelete = true
+		isMutate = true
+	}
+
+	isArchive := false
+	var arFmt archiveFormat
+	switch queryPrefix {
+	case "tar":
+		isArchive = true
+		arFmt = tarFmt
+		outFileName = ".tar"
+	case "tgz":
+		isArchive = true
+		arFmt = tgzFmt
+		outFileName = ".tar.tz"
+	case "zip":
+		isArchive = true
+		arFmt = zipFmt
+		outFileName = ".zip"
+	}
+	if isArchive {
+		arName, _ := getQueryValue(query, queryPrefix)
+		if len(arName) > 0 {
+			outFileName = arName
+		} else {
+			outFileName = itemName + outFileName
+		}
+	}
+
+	_, isSimple := query["simple"]
+	dlName, isDownload := getQueryValue(query, "download")
+	if isDownload {
+		if len(dlName) > 0 {
+			outFileName = dlName
+		} else {
+			outFileName = itemName
+		}
+	}
 
 	subItems, _readdirErr := readdir(file, item, canIndex && !isMutate && !isArchive && NeedResponseBody(r.Method))
 	if _readdirErr != nil {
@@ -536,6 +559,8 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 		isArchive:     isArchive,
 		archiveFormat: arFmt,
 
+		outFileName: outFileName,
+
 		file: file,
 
 		query: query,
@@ -565,7 +590,6 @@ func (h *aliasHandler) getSessionData(r *http.Request) (session *sessionContext,
 		RootRelPath: rootRelPath,
 
 		Item:          item,
-		ItemName:      itemName,
 		SubItems:      subItems,
 		AliasSubItems: aliasSubItems,
 		SubItemsHtml:  nil,

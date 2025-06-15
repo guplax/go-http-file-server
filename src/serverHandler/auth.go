@@ -55,24 +55,18 @@ func (h *aliasHandler) verifyAuth(r *http.Request, vhostReqPath, reqFsPath strin
 }
 
 func (h *aliasHandler) extractNoAuthUrl(r *http.Request, session *sessionContext, data *responseData) string {
-	if session.query.Has(authQueryParam) {
-		returnUrl := session.query.Get(authQueryParam)
-
-		if len(returnUrl) > 0 {
-			url, err := url.QueryUnescape(returnUrl)
-			if err == nil {
-				returnUrl = url
-			}
-		}
-
-		if len(returnUrl) > 0 {
+	returnUrl, hasReturnUrl := getQueryValue(session.query, authQueryParam)
+	if hasReturnUrl && len(returnUrl) > 0 {
+		var err error
+		returnUrl, err = url.QueryUnescape(returnUrl)
+		if err == nil {
 			return returnUrl
 		}
 	}
 
-	referrer := r.Header.Get("Referer")
-	if len(referrer) > 0 {
-		return referrer
+	returnUrl = r.Header.Get("Referer")
+	if len(returnUrl) > 0 {
+		return returnUrl
 	}
 
 	return session.prefixReqPath + data.Context.QueryString()
