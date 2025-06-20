@@ -12,12 +12,12 @@
 	var classNone = 'none';
 	var classHeader = 'header';
 
-	var selectorNone = '.' + classNone;
-	var selectorNotNone = ':not(' + selectorNone + ')';
+	var selectorIsNone = '.' + classNone;
+	var selectorNotNone = ':not(' + selectorIsNone + ')';
 	var selectorPathList = '.path-list';
 	var selectorItemList = '.item-list';
-	var selectorItem = selectorItemList + ' > li:not(.' + classHeader + '):not(.parent)';
-	var selectorItemNone = selectorItem + selectorNone;
+	var selectorItem = 'li:not(.' + classHeader + '):not(.parent)';
+	var selectorItemIsNone = selectorItem + selectorIsNone;
 	var selectorItemNotNone = selectorItem + selectorNotNone;
 
 	var leavingEvent = typeof window.onpagehide !== strUndef ? 'pagehide' : 'beforeunload';
@@ -33,75 +33,77 @@
 	} catch (err) {
 	}
 
+	var filteredText = '';
+
+	function matchFilter(input) {
+		return input.toLowerCase().indexOf(filteredText) >= 0;
+	}
+
 	var lastFocused;
 
 	function enableFilter() {
-		// pre check
 		var filter = document.body.querySelector('.filter');
-		if (!filter) {
-			return;
-		}
+		if (!filter) return;
 
 		var input = filter.querySelector('input');
-		if (!input) {
-			return;
-		}
+		if (!input) return;
 
 		var clear = filter.querySelector('button');
+		if (!clear) clear = document.createElement('button');
 
-		// event handler
+		var itemList = document.querySelector(selectorItemList)
+
 		var timeoutId;
-		var lastFilterText = '';
 		var doFilter = function () {
-			var filterText = input.value.trim().toLowerCase();
-			if (filterText === lastFilterText) {
-				return;
-			}
+			var filteringText = input.value.trim().toLowerCase();
+			if (filteringText === filteredText) return;
 
-			var selector, items, i;
+			var items
+			if (filteringText) {
+				clear.style.display = 'block';
 
-			if (!filterText) {	// filter cleared, show all items
-				if (clear) {
-					clear.style.display = '';
-				}
-				selector = selectorItemNone;
-				items = document.body.querySelectorAll(selector);
-				for (i = items.length - 1; i >= 0; i--) {
-					items[i].classList.remove(classNone);
-				}
-			} else {
-				if (clear) {
-					clear.style.display = 'block';
-				}
-				if (filterText.indexOf(lastFilterText) >= 0) {	// increment search, find in visible items
+				var selector
+				if (filteringText.indexOf(filteredText) >= 0) {	// increment search, find in visible items
 					selector = selectorItemNotNone;
-				} else if (lastFilterText.indexOf(filterText) >= 0) {	// decrement search, find in hidden items
-					selector = selectorItemNone;
+				} else if (filteredText.indexOf(filteringText) >= 0) {	// decrement search, find in hidden items
+					selector = selectorItemIsNone;
 				} else {
 					selector = selectorItem;
 				}
+				filteredText = filteringText;
 
-				items = document.body.querySelectorAll(selector);
-				for (i = items.length - 1; i >= 0; i--) {
-					var item = items[i];
+				items = itemList.querySelectorAll(selector);
+				if (!items.forEach) items = Array.prototype.slice.call(items);	// IE9+/ClassicEdge
+				items.forEach(function (item) {
 					var name = item.querySelector('.name');
-					if (name && name.textContent.toLowerCase().indexOf(filterText) < 0) {
-						item.classList.add(classNone);
+					if (matchFilter(name.textContent)) {
+						if (selector !== selectorItemNotNone) {
+							item.classList.remove(classNone);
+						}
 					} else {
-						item.classList.remove(classNone);
+						if (selector !== selectorItemIsNone) {
+							item.classList.add(classNone);
+						}
 					}
-				}
-			}
+				});
+			} else {	// filter cleared, show all items
+				clear.style.display = '';
+				filteredText = '';
 
-			lastFilterText = filterText;
+				items = itemList.querySelectorAll(selectorItemIsNone);
+				if (!items.forEach) items = Array.prototype.slice.call(items);	// IE9+/ClassicEdge
+				items.forEach(function (item) {
+					item.classList.remove(classNone);
+				});
+			}
 		};
 
 		var onValueMayChange = function () {
 			clearTimeout(timeoutId);
 			timeoutId = setTimeout(doFilter, 350);
 		};
-		input.addEventListener('input', onValueMayChange, false);
-		input.addEventListener('change', onValueMayChange, false);
+		input.addEventListener('input', onValueMayChange);
+		input.addEventListener('change', onValueMayChange);
 
 		var onEnter = function () {
 			clearTimeout(timeoutId);
@@ -126,29 +128,28 @@
 					e.preventDefault();
 					break;
 			}
-		}, false);
-
-		clear && clear.addEventListener('click', function () {
-			clearTimeout(timeoutId);
-			input.value = '';
+		});
+		clear.addEventListener('click', function () {
+			onEscape();
 			input.focus();
-			doFilter();
 		});
 
 		// init
 		if (hasStorage) {
 			var prevSessionFilter = sessionStorage.getItem(location.pathname);
-			sessionStorage.removeItem(location.pathname);
+			if (prevSessionFilter) {
+				input.value = prevSessionFilter;
+			}
+			if (prevSessionFilter !== null) {
+				sessionStorage.removeItem(location.pathname);
+			}
 
 			window.addEventListener(leavingEvent, function () {
 				if (input.value) {
 					sessionStorage.setItem(location.pathname, input.value);
 				}
-			}, false);
+			});
 
-			if (prevSessionFilter) {
-				input.value = prevSessionFilter;
-			}
 		}
 		if (input.value) {
 			doFilter();
