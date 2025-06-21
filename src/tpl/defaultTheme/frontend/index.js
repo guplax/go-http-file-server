@@ -158,10 +158,7 @@
 
 	function keepFocusOnBackwardForward() {
 		function onFocus(e) {
-			var link = e.target;
-			while (link && !(link instanceof HTMLAnchorElement)) {
-				link = link.parentElement;
-			}
+			var link = e.target.closest('a');
 			if (!link || link === lastFocused) return;
 			lastFocused = link;
 		}
@@ -1118,4 +1115,4 @@
 	enableKeyboardNavigate();
 	enhanceUpload();
 	enableNonRefreshDelete();
-})();
+}());
