@@ -179,7 +179,7 @@
 			var sepIndex = url.indexOf('?');
 			if (sepIndex < 0) sepIndex = url.indexOf('#');
 			if (sepIndex >= 0) {
-				url = url.substring(0, sepIndex);
+				url = url.slice(0, sepIndex);
 			}
 			return url;
 		}
@@ -191,35 +191,37 @@
 		var currUrl = extractCleanUrl(location.href);
 
 		if (prevUrl.length <= currUrl.length) return;
-		if (prevUrl.substring(0, currUrl.length) !== currUrl) return;
-		var goesUp = prevUrl.substring(currUrl.length);
+		if (prevUrl.slice(0, currUrl.length) !== currUrl) return;
+		var goesUp = prevUrl.slice(currUrl.length);
 		if (currUrl[currUrl.length - 1] !== '/' && goesUp[0] !== '/') return;
 		var matchInfo = /[^/]+/.exec(goesUp);
 		if (!matchInfo) return;
 		var prevChildName = matchInfo[0];
 		if (!prevChildName) return;
 		prevChildName = decodeURIComponent(prevChildName);
+		if (!matchFilter(prevChildName)) return;
 
-		var items = document.body.querySelectorAll(selectorItem);
+		var items = document.body.querySelectorAll(selectorItemList + '>' + selectorItemNotNone);
 		items = Array.prototype.slice.call(items);
 		var selectorName = '.field.name';
 		var selectorLink = 'a';
-		for (var i = 0, len = items.length; i < len; i++) {
+		for (var i = 0; i < items.length; i++) {
 			var item = items[i];
 			var elName = item.querySelector(selectorName);
 			if (!elName) continue;
+
 			var text = elName.textContent;
 			if (text[text.length - 1] === '/') {
-				text = text.substring(0, text.length - 1);
+				text = text.slice(0, -1);
 			}
 			if (text !== prevChildName) continue;
+
 			var elLink = item.querySelector(selectorLink);
-			if (elLink) {
-				lastFocused = elLink;
-				elLink.focus();
-				elLink.scrollIntoView({block: 'center'});
-			}
-			break;
+			if (!elLink) break;
+
+			lastFocused = elLink;
+			elLink.focus();
+			elLink.scrollIntoView({block: 'center'});
 		}
 	}
 
