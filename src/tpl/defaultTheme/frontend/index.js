@@ -14,7 +14,9 @@
 
 	var selectorNone = '.' + classNone;
 	var selectorNotNone = ':not(' + selectorNone + ')';
-	var selectorItem = '.item-list > li:not(.' + classHeader + '):not(.parent)';
+	var selectorPathList = '.path-list';
+	var selectorItemList = '.item-list';
+	var selectorItem = selectorItemList + ' > li:not(.' + classHeader + '):not(.parent)';
 	var selectorItemNone = selectorItem + selectorNone;
 	var selectorItemNotNone = selectorItem + selectorNotNone;
 
@@ -163,7 +165,7 @@
 			lastFocused = link;
 		}
 
-		var itemList = document.body.querySelector('.item-list');
+		var itemList = document.body.querySelector(selectorItemList);
 		itemList.addEventListener('focusin', onFocus);
 		itemList.addEventListener('click', onFocus);
 		window.addEventListener('pageshow', function () {
@@ -224,8 +226,8 @@
 	}
 
 	function enableKeyboardNavigate() {
-		var pathList = document.body.querySelector('.path-list');
-		var itemList = document.body.querySelector('.item-list');
+		var pathList = document.body.querySelector(selectorPathList);
+		var itemList = document.body.querySelector(selectorItemList);
 		if (!pathList && !itemList) {
 			return;
 		}
@@ -1058,7 +1060,7 @@
 	}
 
 	function enableNonRefreshDelete() {
-		var itemList = document.body.querySelector('.item-list');
+		var itemList = document.body.querySelector(selectorItemList);
 		if (!itemList) return;
 		if (!itemList.classList.contains('has-deletable')) return;
 
