@@ -236,10 +236,7 @@
 			if (!startA) {
 				startA = container.querySelector(':focus');
 			}
-			var startLI = startA;
-			while (startLI && startLI.tagName !== 'LI') {
-				startLI = startLI.parentElement;
-			}
+			var startLI = startA && startA.closest('li');
 			if (!startLI) {
 				if (isBackward) {
 					startLI = container.firstElementChild;
@@ -254,15 +251,9 @@
 			var siblingLI = startLI;
 			do {
 				if (isBackward) {
-					siblingLI = siblingLI.previousElementSibling;
-					if (!siblingLI) {
-						siblingLI = container.lastElementChild;
-					}
+					siblingLI = siblingLI.previousElementSibling || container.lastElementChild;
 				} else {
-					siblingLI = siblingLI.nextElementSibling;
-					if (!siblingLI) {
-						siblingLI = container.firstElementChild;
-					}
+					siblingLI = siblingLI.nextElementSibling || container.firstElementChild;
 				}
 			} while (siblingLI !== startLI && (
 				siblingLI.classList.contains(classNone) ||
@@ -287,8 +278,7 @@
 		}
 
 		function getMatchedFocusableSibling(container, isBackward, startA, buf) {
-			var skipRound = buf.length === 1;	// find next prefix
-			var matchKeyA;
+			var skipRound = buf.length === 1;	// find next single-char prefix
 			var firstCheckA;
 			var secondCheckA;
 			var a = startA;
@@ -314,11 +304,10 @@
 				}
 
 				var textContent = (a.querySelector('.name') || a).textContent.toLowerCase();
-				if (buf.length <= textContent.length && textContent.substring(0, buf.length) === buf) {
+				if (textContent.startsWith(buf)) {
 					return a;
 				}
 			} while (a = getFocusableSibling(container, isBackward, a));
-			return matchKeyA;
 		}
 
 		var ARROW_UP = 'ArrowUp';
@@ -354,7 +343,7 @@
 
 			var currentLookupStartA;
 			if (key === lookupKey) {
-				// same as last key, lookup next for the same key as prefix
+				// same as last key, lookup next single-char prefix
 				currentLookupStartA = container.querySelector(':focus');
 			} else {
 				if (!lookupStartA) {
@@ -364,7 +353,7 @@
 				if (lookupKey === undefined) {
 					lookupKey = key;
 				} else {
-					// key changed, no more prefix match
+					// key changed, no more single-char prefix match
 					lookupKey = '';
 				}
 			}
