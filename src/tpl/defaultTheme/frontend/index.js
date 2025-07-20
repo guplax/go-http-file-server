@@ -335,12 +335,6 @@
 		var ARROW_LEFT = 'ArrowLeft';
 		var ARROW_RIGHT = 'ArrowRight';
 
-		// IE/ClassicEdge specific key
-		var UP = 'Up';
-		var DOWN = 'Down';
-		var LEFT = 'Left';
-		var RIGHT = 'Right';
-
 		var SKIP_TAGS = ['INPUT', 'BUTTON', 'TEXTAREA'];
 
 		var PLATFORM = navigator.platform;
@@ -414,28 +408,24 @@
 			if (canArrowMove(e)) {
 				switch (e.key) {
 					case ARROW_DOWN:
-					case DOWN:
 						if (isToEnd(e)) {
 							return getLastFocusableSibling(itemList);
 						} else {
 							return getFocusableSibling(itemList, false);
 						}
 					case ARROW_UP:
-					case UP:
 						if (isToEnd(e)) {
 							return getFirstFocusableSibling(itemList);
 						} else {
 							return getFocusableSibling(itemList, true);
 						}
 					case ARROW_RIGHT:
-					case RIGHT:
 						if (isToEnd(e)) {
 							return getLastFocusableSibling(pathList);
 						} else {
 							return getFocusableSibling(pathList, false);
 						}
 					case ARROW_LEFT:
-					case LEFT:
 						if (isToEnd(e)) {
 							return getFirstFocusableSibling(pathList);
 						} else {
