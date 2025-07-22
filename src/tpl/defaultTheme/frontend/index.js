@@ -41,6 +41,8 @@
 
 	var lastFocused;
 
+	var errLacksMkdir = new Error("mkdir permission is not enabled")
+
 	function enableFilter() {
 		var filter = document.body.querySelector('.filter');
 		if (!filter) return;
@@ -429,22 +431,16 @@
 
 	function enhanceUpload() {
 		var upload = document.body.querySelector('.upload');
-		if (!upload) {
-			return;
-		}
+		if (!upload) return;
+
 		var form = upload.querySelector('form');
-		if (!form) {
-			return;
-		}
-		var fileInput = form.querySelector('.file');
-		if (!fileInput) {
-			return;
-		}
+		if (!form) return;
+
+		var fileInput = form.querySelector('input[type=file]');
+		if (!fileInput) return;
 
 		var uploadType = document.body.querySelector('.upload-type');
-		if (!uploadType) {
-			return;
-		}
+		if (!uploadType) return;
 
 		var file = 'file';
 		var dirFile = 'dirfile';
@@ -473,7 +469,7 @@
 			var handleKindFile = 'file';
 			var handleKindDir = 'directory';
 			var permDescriptor = {mode: 'read'};
-			itemsToFiles = function (dataTransferItems, canMkdir, onDone, onLacksMkdir) {
+			itemsToFiles = function (dataTransferItems, canMkdir) {
 				function resultsToFiles(results, files, dirPath) {
 					return Promise.all(results.map(function (result) {
 						var handle = result.value;
@@ -521,8 +517,7 @@
 				var files = [];
 				var hasDir = false;
 
-				var items = Array.prototype.slice.call(dataTransferItems);
-				Promise.all(items.map(function (item) {
+				return Promise.all(Array.from(dataTransferItems).map(function (item) {
 					return item.getAsFileSystemHandle();
 				})).then(function (handles) {
 					handles = handles.filter(Boolean);	// undefined for pasted content
@@ -530,64 +525,52 @@
 						return handle.kind === handleKindDir;
 					});
 					if (hasDir && !canMkdir) {
-						return onLacksMkdir();
+						throw errLacksMkdir;
 					}
 					var handleResults = handles.map(function (handle) {
 						return {value: handle, done: false};
 					});
-					resultsToFiles(handleResults, files, '').then(function () {
-						onDone(files, hasDir);
+					return resultsToFiles(handleResults, files, '').then(function () {
+						return {files: files, hasDir: hasDir};
 					});
 				});
 			}
 		} else {
-			itemsToFiles = function (dataTransferItems, canMkdir, onDone, onLacksMkdir) {
-				function entriesToFiles(entries, files, onLevelDone) {
-					var len = entries.length;
-					var cb = 0;
-					if (!len) return onLevelDone();
-
-					function increaseCb() {
-						cb++;
-						if (cb === len) {
-							onLevelDone();
-						}
-					}
-
-					function dirReaderToFiles(dirReader, files, onAllRead) {
-						dirReader.readEntries(function (subEntries) {
-							if (!subEntries.length) return onAllRead();
-							entriesToFiles(subEntries, files, function () {
-								dirReaderToFiles(dirReader, files, onAllRead);
-							});
-						}, onAllRead);
-					}
-
-					entries.forEach(function (entry) {
-						if (entry.isFile) {
-							var relativePath = entry.fullPath;
-							if (relativePath[0] === '/') {
-								relativePath = relativePath.substring(1);
+			itemsToFiles = function (dataTransferItems, canMkdir) {
+				function entriesToFiles(entries, files) {
+					return Promise.all(entries.map(function (entry) {
+						return new Promise(function (resolve) {
+							if (entry.isFile) {
+								var relativePath = entry.fullPath;
+								if (relativePath[0] === '/') {
+									relativePath = relativePath.slice(1);
+								}
+								entry.file(function (file) {
+									files.push({file: file, relativePath: relativePath});
+									resolve();
+								}, function (err) {
+									logError(err);
+									resolve()
+								});
+							} else if (entry.isDirectory) {
+								var dirReader = entry.createReader()
+								var onReadSubEntries = function (subEntries) {
+									if (!subEntries.length) resolve();
+									entriesToFiles(subEntries, files).then(function () {
+										dirReader.readEntries(onReadSubEntries);
+									});
+								}
+								dirReader.readEntries(onReadSubEntries);
 							}
-							entry.file(function (file) {
-								files.push({file: file, relativePath: relativePath});
-								increaseCb();
-							}, function (err) {
-								increaseCb();
-								logError(err);
-							});
-						} else if (entry.isDirectory) {
-							var dirReader = entry.createReader();
-							dirReaderToFiles(dirReader, files, increaseCb);
-						}
-					});
+						})
+					}));
 				}
 
+				var entries = [];
 				var files = [];
 				var hasDir = false;
 
-				var entries = [];
-				for (var i = 0, len = dataTransferItems.length; i < len; i++) {
+				for (var i = 0; i < dataTransferItems.length; i++) {
 					var item = dataTransferItems[i];
 					var entry = item.webkitGetAsEntry();
 					if (!entry) {	// undefined for pasted text
@@ -603,25 +586,15 @@
 						if (canMkdir) {
 							entries.push(entry);
 						} else {
-							return onLacksMkdir();
+							return Promise.reject(errLacksMkdir);
 						}
 					}
 				}
 
-				entriesToFiles(entries, files, function () {
-					onDone(files, hasDir);
+				return entriesToFiles(entries, files).then(function () {
+					return {files: files, hasDir: hasDir};
 				});
 			}
-		}
-
-		function dataTransferToFiles(dataTransfer, canMkdir, onDone, onLacksMkdir) {
-			itemsToFiles(dataTransfer.items, canMkdir, function (files, hasDir) {
-				// ancient Browser
-				if (files.length === 0 && dataTransfer.files && dataTransfer.files.length) {
-					files = Array.prototype.slice.call(dataTransfer.files);
-				}
-				onDone(files, hasDir);
-			}, onLacksMkdir);
 		}
 
 		var switchToFileMode = noop;
@@ -913,16 +886,19 @@
 					return;
 				}
 
-				dataTransferToFiles(e.dataTransfer, canMkdir, function (files, hasDir) {
-					if (hasDir) {
+				itemsToFiles(e.dataTransfer.items, canMkdir).then(function (result) {
+					var files = result.files;
+					if (result.hasDir) {
 						switchToDirMode();
 						uploadProgressively(files);
 					} else {
 						switchToFileMode();
 						uploadProgressively(files);
 					}
-				}, function () {
-					typeof showUploadDirFailMessage !== strUndef && showUploadDirFailMessage();
+				}, function (err) {
+					if (err === errLacksMkdir && typeof showUploadDirFailMessage !== strUndef) {
+						showUploadDirFailMessage();
+					}
 				});
 			}
 
@@ -1012,7 +988,8 @@
 					return;
 				}
 
-				itemsToFiles(items, canMkdir, function (files, hasDir) {
+				itemsToFiles(items, canMkdir).then(function (result) {
+					var files = result.files;
 					// for pasted text
 					if (!files.length) {
 						generatePastedFiles(data);
@@ -1029,14 +1006,16 @@
 					}
 
 					// pasted real files
-					if (hasDir) {
+					if (result.hasDir) {
 						switchToDirMode();
 					} else {
 						switchToFileMode();
 					}
 					uploadProgressively(files);
-				}, function () {
-					typeof showUploadDirFailMessage !== strUndef && showUploadDirFailMessage();
+				}, function (err) {
+					if (err === errLacksMkdir && typeof showUploadDirFailMessage !== strUndef) {
+						showUploadDirFailMessage();
+					}
 				});
 			});
 		}

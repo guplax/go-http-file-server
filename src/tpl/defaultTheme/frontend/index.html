@@ -60,7 +60,7 @@
 </div>
 <div class="panel upload">
 	<form method="POST" action="{{.SubItemPrefix}}?upload" enctype="multipart/form-data">
-		<input type="file" name="file" multiple="multiple" class="file"/>
+		<input type="file" name="file" multiple="multiple"/>
 		<input type="hidden" name="contextquerystring" value="{{$contextQueryString}}"/>
 		<button type="submit" class="submit">{{.Trans.UploadLabel}}</button>
 	</form>
