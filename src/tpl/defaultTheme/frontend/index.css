@@ -159,33 +159,39 @@ html.dragging::before {
 
 .tab {
 	display: flex;
+	gap: 0.5em;
 	white-space: nowrap;
 	margin: 1em 1em -1em 1em;
 }
 
-.tab label {
+.tab h3, .tab a {
 	flex: 0 0 auto;
-	margin-right: 0.5em;
 	padding: 1em;
+}
+
+.tab h3 {
+	margin: 0;
+	font-size: inherit;
+}
+
+.tab a {
 	cursor: pointer;
 }
 
-.tab label:focus {
-	outline: 0;
-	text-decoration: underline;
-	text-decoration-style: dotted;
+.tab a:focus {
+	text-decoration: underline 1px dotted;
 }
 
-.tab label:hover {
+.tab a:hover {
 	background: #fbfbfb;
 }
 
-.tab label.active {
+.tab a.active {
 	color: #000;
 	background: #f7f7f7;
 }
 
-.tab label:last-child {
+.tab a:last-child {
 	margin-right: 0;
 }
 
@@ -532,11 +538,11 @@ html.dragging::before {
 		border-color: #555 #555 transparent transparent;
 	}
 
-	.tab label:hover {
+	.tab a:hover {
 		background-color: #181818;
 	}
 
-	.tab label.active {
+	.tab a.active {
 		color: #fff;
 		background-color: #222;
 	}

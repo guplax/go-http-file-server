@@ -1,7 +1,4 @@
 (function () {
-	function noop() {
-	}
-
 	function logError(err) {
 		console.error(err);
 	}
@@ -439,6 +436,9 @@
 		var fileInput = form.querySelector('input[type=file]');
 		if (!fileInput) return;
 
+		var submitButton = form.querySelector('[type=submit]');
+		if (submitButton) submitButton.classList.add(classNone);
+
 		var uploadType = document.body.querySelector('.upload-type');
 		if (!uploadType) return;
 
@@ -597,16 +597,13 @@
 			}
 		}
 
-		var switchToFileMode = noop;
-		var switchToDirMode = noop;
-
-		function enableAddDirFile() {
+		function enableFileDirModeSwitch() {
 			var classHidden = 'hidden';
 			var classActive = 'active';
 
 			function onClickOpt(optTarget, clearInput) {
 				if (optTarget === optActive) {
-					return;
+					return false;
 				}
 				optActive.classList.remove(classActive);
 
@@ -657,12 +654,28 @@
 				}
 			}
 
-			optDirFile && optDirFile.classList.remove(classHidden);
-			optInnerDirFile && optInnerDirFile.classList.remove(classHidden);
-
 			if (optFile) {
 				optFile.addEventListener('click', onClickOptFile);
 				optFile.addEventListener('keydown', onKeydownOpt);
+
+				fileInput.addEventListener('change', function (e) {
+					// workaround fix for old browsers, select dir not work but still act like select files
+					// switch back to file
+					if (optActive === optFile) {
+						return;
+					}
+					var files = e.target.files;
+					if (!files.length) {
+						return;
+					}
+
+					var nodir = Array.prototype.slice.call(files).every(function (file) {
+						return file.webkitRelativePath.indexOf('/') < 0;
+					});
+					if (nodir) {
+						onClickOptFile();	// prevent clear input files
+					}
+				});
 			}
 			if (optDirFile) {
 				optDirFile.addEventListener('click', onClickOptDirFile);
@@ -676,49 +689,32 @@
 			if (hasStorage) {
 				var uploadTypeField = 'upload-type';
 				var prevUploadType = sessionStorage.getItem(uploadTypeField);
-				sessionStorage.removeItem(uploadTypeField);
+				if (prevUploadType === dirFile) {
+					optDirFile && optDirFile.click();
+				} else if (prevUploadType === innerDirFile) {
+					optInnerDirFile && optInnerDirFile.click();
+				}
+
+				if (prevUploadType !== null) {
+					sessionStorage.removeItem(uploadTypeField);
+				}
 
 				window.addEventListener(leavingEvent, function () {
 					var activeUploadType = fileInput.name;
 					if (activeUploadType !== file) {
 						sessionStorage.setItem(uploadTypeField, activeUploadType)
 					}
-				}, false);
-
-				if (prevUploadType === dirFile) {
-					optDirFile && optDirFile.click();
-				} else if (prevUploadType === innerDirFile) {
-					optInnerDirFile && optInnerDirFile.click();
-				}
+				});
 			}
 
-			optFile && fileInput.addEventListener('change', function (e) {
-				// workaround fix for mobile device, select dir not work but still act like select files
-				// switch back to file
-				if (optActive === optFile) {
-					return;
-				}
-				var files = e.target.files;
-				if (!files.length) {
-					return;
-				}
-
-				var nodir = Array.prototype.slice.call(files).every(function (file) {
-					return file.webkitRelativePath.indexOf('/') < 0;
-				});
-				if (nodir) {
-					onClickOptFile();	// prevent clear input files
-				}
-			});
-
-			switchToFileMode = function () {
+			function switchToFileMode() {
 				if (optFile && optActive !== optFile) {
 					optFile.focus();
 					onClickOptFile(true);
 				}
 			}
 
-			switchToDirMode = function () {
+			function switchToDirMode() {
 				if (optDirFile) {
 					if (optActive !== optDirFile) {
 						optDirFile.focus();
@@ -731,6 +727,11 @@
 					}
 				}
 			}
+
+			return {
+				switchToFileMode: switchToFileMode,
+				switchToDirMode: switchToDirMode
+			};
 		}
 
 		function enableUploadProgress() {	// also fix Safari upload filename has no path info
@@ -850,7 +851,7 @@
 			});
 		}
 
-		function enableAddDragDrop(uploadProgressively) {
+		function enableAddDragDrop(uploadProgressively, switchToFileMode, switchToDirMode) {
 			var isSelfDragging = false;
 			var classDragging = 'dragging';
 
@@ -911,7 +912,7 @@
 			dragDropEl.addEventListener('drop', onDrop);
 		}
 
-		function enableAddPasteProgressively(uploadProgressively) {
+		function enableAddPasteProgressively(uploadProgressively, switchToFileMode, switchToDirMode) {
 			var typeTextPlain = 'text/plain';
 			var nonTextInputTypes = ['hidden', 'radio', 'checkbox', 'button', 'reset', 'submit', 'image'];
 
@@ -1020,11 +1021,11 @@
 			});
 		}
 
-		enableAddDirFile();
+		var modes = enableFileDirModeSwitch();
 		var uploadProgressively = enableUploadProgress();
 		enableFormUploadProgress(uploadProgressively);
-		enableAddPasteProgressively(uploadProgressively);
-		enableAddDragDrop(uploadProgressively);
+		enableAddPasteProgressively(uploadProgressively, modes.switchToFileMode, modes.switchToDirMode);
+		enableAddDragDrop(uploadProgressively, modes.switchToFileMode, modes.switchToDirMode);
 	}
 
 	function enableNonRefreshDelete() {
