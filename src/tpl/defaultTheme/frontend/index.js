@@ -740,41 +740,9 @@
 			var classUploading = 'uploading';
 			var classFailed = 'failed';
 			var elUploadStatus = document.body.querySelector('.upload-status');
-			var elProgress = elUploadStatus && elUploadStatus.querySelector('.progress');
-			var elFailedMessage = elUploadStatus && elUploadStatus.querySelector('.warn .message');
-
-			function onComplete() {
-				if (elProgress) {
-					elProgress.style.width = '';
-				}
-			}
-
-			function onSuccess() {
-				if (batches.length) {
-					return uploadBatch(batches.shift());	// use "return" for tail call optimize
-				} else {
-					uploading = false;
-					elUploadStatus.classList.remove(classUploading);
-				}
-			}
-
-			function onFail(e) {
-				elUploadStatus.classList.remove(classUploading);
-				elUploadStatus.classList.add(classFailed);
-				if (elFailedMessage) {
-					elFailedMessage.textContent = " - " + e.type;
-				}
-				batches.length = 0;
-			}
-
-			function onLoad() {
-				var status = this.status;
-				if (status >= 200 && status <= 299) {
-					!uploading && location.reload();
-				} else {
-					onFail({type: this.statusText || status});
-				}
-			}
+			if (!elUploadStatus) return;
+			var elProgress = elUploadStatus.querySelector('.progress');
+			var elFailedMessage = elUploadStatus.querySelector('.warn .message');
 
 			function onProgress(e) {
 				if (e.lengthComputable) {
@@ -783,19 +751,28 @@
 				}
 			}
 
-			function uploadProgressively(files) {
-				if (!files.length) {
-					return;
-				}
+			function onFail(e) {
+				elUploadStatus.classList.remove(classUploading);
+				elUploadStatus.classList.add(classFailed);
+				elFailedMessage.textContent = " - " + e.type;
+				batches.length = 0;
+			}
 
-				if (uploading) {
-					batches.push(files);
+			function onSuccess(e) {
+				var status = e.target.status
+				if (status < 200 || status >= 300) {
+					return onFail({type: e.target.statusText || status});
+				} else if (batches.length) {
+					uploadBatch(batches.shift());
 				} else {
-					uploading = true;
-					elUploadStatus.classList.remove(classFailed);
-					elUploadStatus.classList.add(classUploading);
-					uploadBatch(files);
+					uploading = false;
+					elUploadStatus.classList.remove(classUploading);
+					location.reload();
 				}
+			}
+
+			function onFinally() {
+				elProgress.style.width = '';
 			}
 
 			function uploadBatch(files) {
@@ -818,19 +795,31 @@
 				});
 
 				var xhr = new XMLHttpRequest();
-				xhr.addEventListener('error', onComplete);
+				xhr.upload.addEventListener('progress', onProgress);
 				xhr.addEventListener('error', onFail);
-				xhr.addEventListener('abort', onComplete);
+				xhr.addEventListener('error', onFinally);
 				xhr.addEventListener('abort', onFail);
-				xhr.addEventListener('load', onComplete);
+				xhr.addEventListener('abort', onFinally);
 				xhr.addEventListener('load', onSuccess);
-				xhr.addEventListener('load', onLoad);
-				if (elProgress) {
-					xhr.upload.addEventListener('progress', onProgress);
-				}
+				xhr.addEventListener('load', onFinally);
 
 				xhr.open(form.method, form.action);
 				xhr.send(parts);
+			}
+
+			function uploadProgressively(files) {
+				if (!files.length) {
+					return;
+				}
+
+				if (uploading) {
+					batches.push(files);
+				} else {
+					uploading = true;
+					elUploadStatus.classList.remove(classFailed);
+					elUploadStatus.classList.add(classUploading);
+					uploadBatch(files);
+				}
 			}
 
 			return uploadProgressively;
@@ -851,7 +840,7 @@
 			});
 		}
 
-		function enableAddDragDrop(uploadProgressively, switchToFileMode, switchToDirMode) {
+		function enableDndUploadProgress(uploadProgressively, switchToFileMode, switchToDirMode) {
 			var isSelfDragging = false;
 			var classDragging = 'dragging';
 
@@ -864,16 +853,15 @@
 			}
 
 			function onDragEnterOver(e) {
-				if (!isSelfDragging) {
-					e.stopPropagation();
-					e.preventDefault();
-					e.currentTarget.classList.add(classDragging);
-				}
+				if (isSelfDragging) return;
+				e.stopPropagation();
+				e.preventDefault();
+				e.currentTarget.classList.add(classDragging);
 			}
 
 			function onDragLeave(e) {
 				if (e.target === e.currentTarget) {
-					e.currentTarget.classList.remove(classDragging);
+					e.target.classList.remove(classDragging);
 				}
 			}
 
@@ -905,73 +893,30 @@
 
 			document.body.addEventListener('dragstart', onSelfDragStart);
 			document.body.addEventListener('dragend', onDragEnd);
-			var dragDropEl = document.documentElement;
-			dragDropEl.addEventListener('dragenter', onDragEnterOver);
-			dragDropEl.addEventListener('dragover', onDragEnterOver);
-			dragDropEl.addEventListener('dragleave', onDragLeave);
-			dragDropEl.addEventListener('drop', onDrop);
+			var dndTarget = document.documentElement;
+			dndTarget.addEventListener('dragenter', onDragEnterOver);
+			dndTarget.addEventListener('dragover', onDragEnterOver);
+			dndTarget.addEventListener('dragleave', onDragLeave);
+			dndTarget.addEventListener('drop', onDrop);
 		}
 
-		function enableAddPasteProgressively(uploadProgressively, switchToFileMode, switchToDirMode) {
+		function enablePasteUploadProgress(uploadProgressively, switchToFileMode, switchToDirMode) {
 			var typeTextPlain = 'text/plain';
 			var nonTextInputTypes = ['hidden', 'radio', 'checkbox', 'button', 'reset', 'submit', 'image'];
 
-			function uploadPastedFiles(files) {
+			function uploadPastedContent(file) {
 				switchToFileMode();
+
 				var ts = getTimeStamp();
-				files = files.map(function (f, i) {
-					var filename = f.name;
-					var dotIndex = filename.lastIndexOf('.');
-					if (dotIndex < 0) {
-						dotIndex = filename.length;
-					}
-					filename = filename.substring(0, dotIndex) + ts + '-' + i + filename.substring(dotIndex);
-					return {
-						file: f,
-						relativePath: filename
-					}
-				});
+				var filename = file.name;
+				var dotIndex = filename.lastIndexOf('.');
+				if (dotIndex < 0) {
+					dotIndex = filename.length;
+				}
+				filename = filename.slice(0, dotIndex) + ts + filename.slice(dotIndex);
+
+				var files = [{file: file, relativePath: filename}];
 				uploadProgressively(files);
-			}
-
-			function generatePastedFiles(data) {
-				var files;
-				var items;
-				if (data.files && data.files.length) {
-					// pasted content is image
-					files = Array.prototype.slice.call(data.files);
-				} else if (data.items && data.items.length) {
-					// pasted content is text
-					items = Array.prototype.slice.call(data.items);
-					files = items.map(function (item) {
-						return item.getAsFile();
-					}).filter(Boolean);
-				} else {
-					files = [];
-				}
-
-				if (files.length) {
-					uploadPastedFiles(files);
-					return;
-				}
-
-				if (!items) {
-					return;
-				}
-				var plainTextFiles = 0;
-				for (var i = 0, itemsCount = items.length; i < itemsCount; i++) {
-					if (data.types[i] !== typeTextPlain) {
-						continue
-					}
-					plainTextFiles++;
-					items[i].getAsString(function (content) {
-						var file = new File([content], 'text.txt', {type: typeTextPlain})
-						files.push(file);
-						if (files.length === plainTextFiles) {
-							uploadPastedFiles(files);
-						}
-					});
-				}
 			}
 
 			document.documentElement.addEventListener('paste', function (e) {
@@ -981,51 +926,52 @@
 				} else if (tagName === 'INPUT' && nonTextInputTypes.indexOf(e.target.type) < 0) {
 					return;
 				}
+
 				var data = e.clipboardData;
+				var dItems = data.items;
+				var dFiles = data.files;
 
-				var items = data.items;
-				if (!items.length) {
-					generatePastedFiles(data);
-					return;
-				}
-
-				itemsToFiles(items, canMkdir).then(function (result) {
-					var files = result.files;
-					// for pasted text
-					if (!files.length) {
-						generatePastedFiles(data);
-						return;
-					}
-
-					// suppose for pasted image data
-					if (files.length === 1 && files[0].file.type === 'image/png') {
-						files = files.map(function (fileInfo) {
-							return fileInfo && fileInfo.file;
+				if (dItems.length === 1 && dFiles.length === 1 && dFiles[0].type === 'image/png') {
+					// image pasted
+					uploadPastedContent(dFiles[0]);
+				} else if (dItems.length > 0 && dFiles.length === 0) {
+					// text pasted (with other data types in DataTransferItems
+					var textTypeIndex = data.types.findIndex(function (t) {
+						return t === typeTextPlain;
+					});
+					var textItem = dItems[textTypeIndex];
+					if (textItem) {
+						textItem.getAsString(function (content) {
+							var file = new File([content], 'text.txt', {type: typeTextPlain})
+							uploadPastedContent(file);
 						});
-						generatePastedFiles({files: files});
-						return;
 					}
+				} else {
+					// actual files/directories pasted
+					itemsToFiles(dItems, canMkdir).then(function (result) {
+						var files = result.files;
 
-					// pasted real files
-					if (result.hasDir) {
-						switchToDirMode();
-					} else {
-						switchToFileMode();
-					}
-					uploadProgressively(files);
-				}, function (err) {
-					if (err === errLacksMkdir && typeof showUploadDirFailMessage !== strUndef) {
-						showUploadDirFailMessage();
-					}
-				});
+						// pasted real files
+						if (result.hasDir) {
+							switchToDirMode();
+						} else {
+							switchToFileMode();
+						}
+						uploadProgressively(files);
+					}, function (err) {
+						if (err === errLacksMkdir && typeof showUploadDirFailMessage !== strUndef) {
+							showUploadDirFailMessage();
+						}
+					});
+				}
 			});
 		}
 
 		var modes = enableFileDirModeSwitch();
 		var uploadProgressively = enableUploadProgress();
 		enableFormUploadProgress(uploadProgressively);
-		enableAddPasteProgressively(uploadProgressively, modes.switchToFileMode, modes.switchToDirMode);
-		enableAddDragDrop(uploadProgressively, modes.switchToFileMode, modes.switchToDirMode);
+		enableDndUploadProgress(uploadProgressively, modes.switchToFileMode, modes.switchToDirMode);
+		enablePasteUploadProgress(uploadProgressively, modes.switchToFileMode, modes.switchToDirMode);
 	}
 
 	function enableNonRefreshDelete() {
