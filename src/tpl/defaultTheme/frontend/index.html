@@ -78,12 +78,12 @@
 
 {{if .CanDelete}}
 <script type="text/javascript">
-	function confirmDelete(form) {
+	function confirmDelete(e) {
+		var form = e.target;
 		var name = form.name.value;
 		var proceed = confirm('{{.Trans.DeleteConfirm}}\n' + name);
 		if (!proceed) {
-			var e = event || window.event;
-			if (e && !('defaultPrevented' in e)) e.defaultPrevented = true;
+			e.preventDefault();
 		}
 		return proceed;
 	}
@@ -124,7 +124,7 @@
 			<span class="field size">{{.DisplaySize}}</span>
 			<span class="field time">{{.DisplayTime}}</span>
 		</a>
-		{{if and (not $isSimple) .DeleteUrl}}<form class="delete" method="post" action="{{$SubItemPrefix}}?delete" onsubmit="return confirmDelete(this)"><input type="hidden" name="name" value="{{.DeleteUrl}}"/><input type="hidden" name="contextquerystring" value="{{$contextQueryString}}"/><button type="submit">x</button></form>{{end}}
+		{{if and (not $isSimple) .DeleteUrl}}<form class="delete" method="post" action="{{$SubItemPrefix}}?delete" onsubmit="return confirmDelete(event)"><input type="hidden" name="name" value="{{.DeleteUrl}}"/><input type="hidden" name="contextquerystring" value="{{$contextQueryString}}"/><button type="submit">x</button></form>{{end}}
 	</li>
 	{{end}}
 </ul>
