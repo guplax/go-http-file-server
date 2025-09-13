@@ -111,18 +111,18 @@
 	</li>
 	<li class="parent">
 		<a href="{{if .IsRoot}}./{{else}}../{{end}}{{$contextQueryString}}" class="detail">
-			<span class="field name" translate="no">../</span>
-			<span class="field size"></span>
-			<span class="field time"></span>
+		<span class="field name" translate="no">../</span>
+		<span class="field size"></span>
+		<span class="field time"></span>
 		</a>
 	</li>
 	{{end}}
 	{{range .SubItemsHtml}}
 	<li class="{{.Type}}">
 		<a href="{{.Url}}" class="detail">
-			<span class="field name" translate="no">{{.DisplayName}}</span>
-			<span class="field size">{{.DisplaySize}}</span>
-			<span class="field time">{{.DisplayTime}}</span>
+		<span class="field name" translate="no">{{.DisplayName}}</span>
+		<span class="field size">{{.DisplaySize}}</span>
+		<span class="field time">{{.DisplayTime}}</span>
 		</a>
 		{{if and (not $isSimple) .DeleteUrl}}<form class="delete" method="post" action="{{$SubItemPrefix}}?delete" onsubmit="return confirmDelete(event)"><input type="hidden" name="name" value="{{.DeleteUrl}}"/><input type="hidden" name="contextquerystring" value="{{$contextQueryString}}"/><button type="submit">x</button></form>{{end}}
 	</li>
@@ -137,7 +137,7 @@
 {{else if eq .Status 404}}
  {{.Trans.Error404}}
 {{else}}
- {{.Trans.ErrorStatus}}</div>
+ {{.Trans.ErrorStatus}}
 {{end}}
 </div>{{end}}
 
