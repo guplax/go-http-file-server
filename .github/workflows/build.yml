@@ -124,9 +124,10 @@ jobs:
           export VERSION=$VERSION
 
           export builds=("$GOOS $GOARCH")
-          pushd build > /dev/null
-          bash ./build.sh "${builds[@]}"
-          popd > /dev/null
+          (
+              cd build
+              bash ./build.sh "${builds[@]}"
+          )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
